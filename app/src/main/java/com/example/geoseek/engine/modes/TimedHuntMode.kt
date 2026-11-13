@@ -103,7 +103,13 @@ class TimedHuntMode(
                 isNewDiscovery = true,
             )
         }
-        val totalXp = cards.sumOf { (_, _, xpValue) -> xpValue } + (if (isVictory) 50 else 10)
+        // An empty hunt ended early must not pay the participation bonus (issue #7).
+        val completionXp = when {
+            isVictory -> 50
+            state.foundObjects.isNotEmpty() || state.secondsRemaining <= 0 -> 10
+            else -> 0
+        }
+        val totalXp = cards.sumOf { (_, _, xpValue) -> xpValue } + completionXp
 
         return GameScoreResult(
             basePoints = basePoints,

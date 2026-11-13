@@ -2,7 +2,7 @@ package com.example.geoseek.data
 
 import android.app.Application
 import android.content.Context
-import com.example.geoseek.engine.questForDay
+import com.example.geoseek.engine.HuntRound
 import com.example.geoseek.models.GameObject
 import com.example.geoseek.models.Rarity
 import org.junit.After
@@ -69,6 +69,23 @@ class ProgressStoreTest {
         val second = progress.recordHunt(first, score = 80, xpEarned = 0, found = emptyList())
         assertEquals(120, second.bestScore)
         assertEquals(2, second.huntsPlayed)
+    }
+
+    /** Issue #7: repeatedly ending empty hunts must not increase the saved XP balance. */
+    @Test
+    fun recordHunt_repeatedEmptyEarlyEndingsDoNotAwardXp() {
+        val before = progress.collect(player, chair, xpEarned = 100)
+        repeat(3) { index ->
+            val round = HuntRound("Indoors", listOf(chair, dog), durationSeconds = 90)
+            val result = round.finish()
+            progress.recordHunt(before, result.totalScore, result.totalXpEarned, round.found)
+
+            val reloaded = AuthStore(application).currentPlayer()!!
+            assertEquals("XP after empty early-ended hunt ${index + 1}", before.xp, reloaded.xp)
+            assertEquals(before.binder, reloaded.binder)
+            assertEquals(before.daily.finds, reloaded.daily.finds)
+            assertEquals(index + 1, reloaded.huntsPlayed)
+        }
     }
 
     @Test
